@@ -21,7 +21,7 @@ from matplotlib import pyplot as plt
 # tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # Hyperparameters:
-epochs = 10
+epochs = 50
 n_batches = 5
 batch_size = 32
 preprocess_batch_path = 'Preprocess_batch'
