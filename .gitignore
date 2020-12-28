@@ -1,4 +1,6 @@
 Trained_model/
 Dataset/
 Preprocess_batch/
+__pycache__/
+.vscode/
 testing.py
