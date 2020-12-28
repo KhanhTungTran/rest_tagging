@@ -3,6 +3,11 @@
 This is a repository for demonstration on how to implement Transfer Learning with VGG19 model combine with Ensemble Learning for Real estate tagging problems
 
 The dataset is pictures of 7 different classes: bathroom, bedroom, dining room, kitchen, living room, exterior, interior. This dataset is crawled from google.com
+
+## Graphs
+
+Current accuracy and loss, hyperparameters setting as in transfer_learning_vgg19.py (without Ensemble Learning):
+![Model accuracy and loss](accuracy_and_loss.png)
 ## Dependencies
 ```
 conda install -r requirements.txt
