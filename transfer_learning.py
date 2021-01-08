@@ -1,12 +1,13 @@
-# NOTE: comment this if train using GPU
-import os
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# # NOTE: comment this if train using GPU
+# import os
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 from preprocess import load_batch, load_batch_bootstrap, load_validation
 import tensorflow as tf
 
 import keras
 from keras.applications.vgg19 import VGG19
+from keras.applications.inception_resnet_v2 import InceptionResNetV2
 from keras.models import Model
 from keras.layers import Dense, GlobalAveragePooling2D
 from keras.losses import CategoricalCrossentropy
@@ -17,29 +18,30 @@ from tensorflow.python.keras.optimizer_v2.learning_rate_schedule import Exponent
 from matplotlib import pyplot as plt
 
 # NOTE: uncomment this if train using GPU
-# physical_devices = tf.config.list_physical_devices('GPU') 
-# tf.config.experimental.set_memory_growth(physical_devices[0], True)
+physical_devices = tf.config.list_physical_devices('GPU') 
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # Hyperparameters:
 epochs = 50
-n_batches = 5
 batch_size = 32
+image_shape = 240
 preprocess_batch_path = 'Preprocess_batch'
 trained_model_path = 'Trained_model' # Please set this to a different value to create different folder for different model
 random_state = None # Please set this to a number if train using bootstrap
 
 # Load model without classifier layers
-base_model = VGG19(
+base_model = InceptionResNetV2(
     weights = 'imagenet',
-    input_shape = (224, 224, 3),
+    input_shape = (image_shape, image_shape, 3),
     include_top = False)
 
 base_model.trainable = False
 
-inputs = keras.Input(shape = (224, 224, 3), dtype=tf.float32)
+inputs = keras.Input(shape = (image_shape, image_shape, 3), dtype=tf.float32)
 x = base_model(inputs)
 x = GlobalAveragePooling2D()(x)
-outputs = Dense(7)(x)
+outputs = Dense(7, activation = 'softmax')(x)
+# outputs = Dense(7)(x)
 model = Model(inputs, outputs)
 
 lr_schedule = ExponentialDecay(
@@ -52,10 +54,38 @@ model.compile(optimizer=optimizer,
             loss=CategoricalCrossentropy(from_logits=True),
             metrics=[CategoricalAccuracy()])
 
-history = model.fit(load_batch_bootstrap(preprocess_batch_path, n_batches, batch_size, random_state),
-                    epochs=epochs,
-                    steps_per_epoch=197*n_batches, 
-                    validation_data=load_validation(preprocess_batch_path, batch_size), validation_steps=109)
+from keras.preprocessing.image import ImageDataGenerator
+train_datagen = ImageDataGenerator(
+        rescale=1./255,
+        shear_range=0.2,
+        zoom_range=0.2,
+        horizontal_flip=True,
+        )
+test_datagen = ImageDataGenerator(rescale=1./255)
+train_generator = train_datagen.flow_from_directory(
+        'data/train',
+        target_size=(image_shape, image_shape),
+        batch_size=32,
+        class_mode='categorical',
+        )
+validation_generator = test_datagen.flow_from_directory(
+        'data/validation',
+        target_size=(image_shape, image_shape),
+        batch_size=32,
+        class_mode='categorical',
+        )
+history = model.fit(
+        train_generator,
+        steps_per_epoch=219,
+        epochs=epochs,
+        validation_data=validation_generator,
+        validation_steps=27)
+
+
+# history = model.fit(load_batch(preprocess_batch_path, n_batches, batch_size),
+#                     epochs=epochs,
+#                     steps_per_epoch=197*n_batches, 
+#                     validation_data=load_validation(preprocess_batch_path, batch_size), validation_steps=109)
 
 model.save("Trained_model")
 

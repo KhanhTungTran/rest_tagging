@@ -4,3 +4,4 @@ Preprocess_batch/
 __pycache__/
 .vscode/
 testing.py
+data/

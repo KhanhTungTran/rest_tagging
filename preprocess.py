@@ -2,6 +2,7 @@ import numpy as np
 import os
 from PIL import Image
 from sklearn.utils import resample
+from keras.applications.inception_resnet_v2 import preprocess_input
 
 def batch_features_labels(features, labels, batch_size):
     """
@@ -91,7 +92,7 @@ def one_hot_encode(x):
 def load_raw_data(path, cats):
     features = []
     labels = []
-    cat_input_length = 5000
+    cat_input_length = 2000
     for idx, cat in enumerate(cats):
         cat_path = os.listdir(path + '/' + cat)
         i = 0
@@ -100,13 +101,13 @@ def load_raw_data(path, cats):
                 # img = nets.utils.load_img(path + '/' + cat + '/' + img_path,\
                 #         crop_size=224)
                 img = Image.open(path + '/' + cat + '/' + img_path)
-                img = img.resize((32, 32))
+                img = img.resize((224, 224))
                 img = img.convert('RGB')
             except Exception as _:
                 print(path + '/' + cat + '/' + img_path)
                 raise(ValueError())
             # img = img.reshape(224, 224, 3)
-            img = np.array(img)
+            img = np.array(img, dtype=np.float32)
             img = img / 255
 
             features.append(img)
@@ -120,6 +121,7 @@ def load_raw_data(path, cats):
     features = np.array(features)
     labels = np.array(labels, dtype=np.uint8)
     labels = one_hot_encode(labels)
+    # labels = labels/6
     rng_state = np.random.get_state()
     np.random.shuffle(features)
     np.random.set_state(rng_state)
@@ -133,3 +135,21 @@ if __name__ == "__main__":
     features, labels = load_raw_data(dataset_path, categories)
     
     save_batch('Preprocess_batch', 5, features, labels)
+
+def load_training(preprocess_batch_path, n_batches):
+    """
+    Load the Preprocessed Training data and return them all
+    """
+    features = []
+    labels = []
+    for batch_id in range(1, n_batches + 1): 
+        batch = np.load(preprocess_batch_path + '/preprocess_batch_' + str(batch_id) + '.npz')
+        features.append(batch["features"])
+        labels.append(batch["labels"])
+    features = np.concatenate(features, axis=0)
+    labels = np.concatenate(labels, axis=0)
+    return features, labels
+
+def load_testing(preprocess_batch_path):
+    valid = np.load(preprocess_batch_path + '/preprocess_validation.npz')
+    return valid["features"], valid["labels"]
